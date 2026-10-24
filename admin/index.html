@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Under &amp; Over 7 — Dashboard admin</title>
+  <style>
+    :root{--bg:#0d0f1e;--panel:#181c36;--card:#222746;--line:#343b63;--gold:#f2c14e;--green:#36cf79;--red:#ff6b70;--text:#f4f5fb;--muted:#979dbc}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#0d0f1e,#171a34);color:var(--text);font-family:Segoe UI,Arial,sans-serif;min-height:100vh}button,input{font:inherit}button{cursor:pointer;border:0}.hidden{display:none!important}
+    .gate{max-width:430px;margin:12vh auto;padding:30px;background:var(--panel);border:1px solid var(--line);border-radius:18px}.gate h1{color:var(--gold);margin-top:0}.gate p,.muted{color:var(--muted)}
+    input{width:100%;background:#292e50;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:11px 12px;outline:0}input:focus{border-color:var(--gold)}label{display:block;color:var(--muted);font-size:12px;font-weight:700;margin:13px 0 6px}
+    .primary,.secondary,.danger{padding:11px 16px;border-radius:9px;font-weight:750}.primary{background:var(--gold);color:#171717}.secondary{background:#303657;color:var(--text);border:1px solid var(--line)}.danger{background:#5a2732;color:#ffb2b5}.wide{width:100%;margin-top:18px}.small{padding:8px 11px;font-size:12px}
+    header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--line);background:#11152a;position:sticky;top:0;z-index:5}header h1{font-size:19px;margin:0;color:var(--gold)}header p{font-size:12px;color:var(--muted);margin:3px 0 0}.header-actions{display:flex;gap:8px}
+    main{max-width:1250px;margin:auto;padding:24px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}.stat strong{font-size:27px;display:block;margin-top:7px}.stat span{color:var(--muted);font-size:12px}
+    .toolbar{display:flex;gap:12px;align-items:center;margin-bottom:14px}.toolbar input{max-width:350px}.toolbar .secondary{margin-left:auto}
+    .table-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:auto}table{width:100%;border-collapse:collapse;min-width:940px}th,td{text-align:left;padding:13px 14px;border-bottom:1px solid #2a3051;font-size:13px}th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}tr:last-child td{border:0}.user{font-weight:750}.sub{font-size:11px;color:var(--muted);margin-top:3px}.badge{display:inline-block;border-radius:20px;padding:5px 9px;font-size:11px;font-weight:800}.active{background:#183e2c;color:var(--green)}.inactive,.expired{background:#4c252e;color:#ff9da1}.empty{text-align:center!important;color:var(--muted);padding:42px!important}
+    dialog{width:min(520px,calc(100% - 30px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:24px}dialog::backdrop{background:#050711cc}.dialog-title{display:flex;justify-content:space-between;align-items:center}.dialog-title h2{margin:0;color:var(--gold);font-size:19px}.close{background:none;color:var(--muted);font-size:24px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.check{display:flex;gap:9px;align-items:center;margin-top:16px;color:var(--text);font-size:13px}.check input{width:auto}.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.message{position:fixed;right:22px;bottom:22px;max-width:390px;padding:13px 16px;border-radius:10px;background:#173a29;border:1px solid #286646;z-index:20}.message.error{background:#48242c;border-color:#843b48}
+    @media(max-width:760px){header{padding:14px 16px}.stats{grid-template-columns:1fr 1fr}main{padding:16px}.toolbar{flex-wrap:wrap}.toolbar input{max-width:none}.toolbar .secondary{margin-left:0}.header-actions .secondary{display:none}.grid2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <section id="gate" class="gate">
+    <h1>Administration</h1>
+    <p>Entrez le secret configuré dans Supabase sous <code>ADMIN_PANEL_SECRET</code>.</p>
+    <label for="secret">Secret administrateur</label>
+    <input id="secret" type="password" autocomplete="current-password">
+    <button class="primary wide" onclick="unlock()">Ouvrir le dashboard</button>
+  </section>
+
+  <section id="app" class="hidden">
+    <header>
+      <div><h1>Under &amp; Over 7</h1><p>Dashboard administrateur</p></div>
+      <div class="header-actions">
+        <button class="secondary" onclick="loadUsers()">Actualiser</button>
+        <button class="primary" onclick="openCreate()">+ Nouvel utilisateur</button>
+        <button class="danger small" onclick="lock()">Quitter</button>
+      </div>
+    </header>
+    <main>
+      <div class="stats">
+        <div class="stat"><span>Utilisateurs</span><strong id="sTotal">—</strong></div>
+        <div class="stat"><span>Comptes actifs</span><strong id="sActive">—</strong></div>
+        <div class="stat"><span>Comptes expirés</span><strong id="sExpired">—</strong></div>
+        <div class="stat"><span>Appareils enregistrés</span><strong id="sDevices">—</strong></div>
+      </div>
+      <div class="toolbar">
+        <input id="search" placeholder="Rechercher un utilisateur…" oninput="renderUsers()">
+        <button class="primary" onclick="openCreate()">+ Créer</button>
+        <button class="secondary" onclick="loadUsers()">↻ Actualiser</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Utilisateur</th><th>Statut</th><th>Validité</th><th>Appareils</th><th>Solde</th><th>Dernière connexion</th><th></th></tr></thead>
+          <tbody id="users"><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </section>
+
+  <dialog id="editor">
+    <div class="dialog-title"><h2 id="editorTitle">Utilisateur</h2><button class="close" onclick="closeEditor()">×</button></div>
+    <input type="hidden" id="userId">
+    <label for="username">Identifiant</label><input id="username" placeholder="ex: jean.dupont">
+    <label for="password">Mot de passe <span class="muted" id="passwordHint"></span></label>
+    <div style="display:flex;gap:8px"><input id="password" type="text"><button class="secondary" onclick="generatePassword()">Générer</button></div>
+    <div class="grid2">
+      <div><label for="maxDevices">Appareils autorisés</label><input id="maxDevices" type="number" min="1" max="100" value="1"></div>
+      <div><label for="validityDays">Nouvelle validité (jours)</label><input id="validityDays" type="number" min="1" max="3650" value="30"></div>
+    </div>
+    <label class="check"><input id="isActive" type="checkbox" checked> Compte actif</label>
+    <label class="check hidden" id="clearDevicesRow"><input id="clearDevices" type="checkbox"> Déconnecter et libérer tous les appareils</label>
+    <div class="actions"><button class="secondary" onclick="closeEditor()">Annuler</button><button class="primary" id="saveBtn" onclick="saveUser()">Enregistrer</button></div>
+  </dialog>
+  <div id="message"></div>
+
+  <script>
+    const SUPABASE_URL="https://dffpbwuruipbvoujjltb.supabase.co";
+    const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmZnBid3VydWlwYnZvdWpqbHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0ODgwODQsImV4cCI6MjEwMzA2NDA4NH0.wUjXzAwaeby9GkeRZ9eW22sq76k_Zj_-vx0AqzrdNog";
+    const ENDPOINT=`${SUPABASE_URL}/functions/v1/admin-create-user`;
+    const SECRET_KEY="uo7_admin_secret";
+    let allUsers=[];
+
+    const el=id=>document.getElementById(id);
+    const escapeHtml=value=>String(value??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+    const headers=()=>({"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_ANON_KEY}`,"apikey":SUPABASE_ANON_KEY,"x-admin-secret":localStorage.getItem(SECRET_KEY)||""});
+    const money=value=>new Intl.NumberFormat("fr-FR",{maximumFractionDigits:0}).format(Number(value)||0)+" XAF";
+    const date=value=>value?new Intl.DateTimeFormat("fr-FR",{dateStyle:"short",timeStyle:"short"}).format(new Date(value)):"Jamais";
+
+    async function api(method,body){
+      const response=await fetch(ENDPOINT,{method,headers:headers(),body:body?JSON.stringify(body):undefined});
+      const data=await response.json().catch(()=>({error:"Réponse serveur invalide"}));
+      if(!response.ok||data.error){if(response.status===401) lock();throw new Error(data.error||`Erreur ${response.status}`)}
+      return data;
+    }
+    async function unlock(){const secret=el("secret").value.trim();if(!secret)return;localStorage.setItem(SECRET_KEY,secret);showApp();await loadUsers()}
+    function lock(){localStorage.removeItem(SECRET_KEY);el("app").classList.add("hidden");el("gate").classList.remove("hidden");el("secret").value=""}
+    function showApp(){el("gate").classList.add("hidden");el("app").classList.remove("hidden")}
+    async function loadUsers(){
+      el("users").innerHTML='<tr><td colspan="7" class="empty">Chargement…</td></tr>';
+      try{allUsers=(await api("GET")).users||[];renderUsers();updateStats()}catch(error){notify(error.message,true);el("users").innerHTML='<tr><td colspan="7" class="empty">Impossible de charger les utilisateurs.</td></tr>'}
+    }
+    function updateStats(){const now=Date.now();el("sTotal").textContent=allUsers.length;el("sActive").textContent=allUsers.filter(u=>u.is_active&&(!u.valid_until||new Date(u.valid_until)>now)).length;el("sExpired").textContent=allUsers.filter(u=>u.valid_until&&new Date(u.valid_until)<=now).length;el("sDevices").textContent=allUsers.reduce((n,u)=>n+Number(u.device_count||0),0)}
+    function renderUsers(){
+      const q=el("search").value.trim().toLowerCase();const users=allUsers.filter(u=>(u.username||"").toLowerCase().includes(q)||(u.email||"").toLowerCase().includes(q));
+      if(!users.length){el("users").innerHTML='<tr><td colspan="7" class="empty">Aucun utilisateur trouvé.</td></tr>';return}
+      el("users").innerHTML=users.map(u=>{const expired=u.valid_until&&new Date(u.valid_until)<=Date.now();const status=!u.is_active?["Désactivé","inactive"]:expired?["Expiré","expired"]:["Actif","active"];return `<tr><td><div class="user">${escapeHtml(u.username)}</div><div class="sub">${escapeHtml(u.id)}</div></td><td><span class="badge ${status[1]}">${status[0]}</span></td><td>${date(u.valid_until)}</td><td>${u.device_count||0} / ${u.max_devices}</td><td>${money(u.balance)}</td><td>${date(u.last_sign_in_at)}</td><td style="white-space:nowrap"><button class="${u.is_active?"danger":"secondary"} small" onclick="toggleActive('${u.id}')">${u.is_active?"Bloquer":"Débloquer"}</button> <button class="secondary small" onclick="openEdit('${u.id}')">Modifier</button></td></tr>`}).join("")
+    }
+    function resetEditor(){el("userId").value="";el("username").value="";el("password").value="";el("maxDevices").value=1;el("validityDays").value=30;el("isActive").checked=true;el("clearDevices").checked=false}
+    function openCreate(){resetEditor();el("editorTitle").textContent="Créer un utilisateur";el("passwordHint").textContent="(obligatoire)";el("clearDevicesRow").classList.add("hidden");el("editor").showModal()}
+    function openEdit(id){const u=allUsers.find(x=>x.id===id);if(!u)return;resetEditor();el("userId").value=u.id;el("username").value=u.username||"";el("maxDevices").value=u.max_devices||1;el("isActive").checked=!!u.is_active;el("editorTitle").textContent="Modifier l'utilisateur";el("passwordHint").textContent="(laisser vide pour conserver)";el("clearDevicesRow").classList.remove("hidden");el("editor").showModal()}
+    function closeEditor(){el("editor").close()}
+    function generatePassword(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";const bytes=new Uint32Array(12);crypto.getRandomValues(bytes);el("password").value=Array.from(bytes,b=>chars[b%chars.length]).join("")}
+    async function saveUser(){
+      const userId=el("userId").value;const body={userId,username:el("username").value.trim(),password:el("password").value,maxDevices:Number(el("maxDevices").value),validityDays:Number(el("validityDays").value),isActive:el("isActive").checked,clearDevices:el("clearDevices").checked};
+      if(!/^[a-zA-Z0-9._-]{3,40}$/.test(body.username))return notify("Identifiant invalide : utilisez lettres, chiffres, point, tiret ou underscore.",true);
+      if((!userId&&body.password.length<6)||(userId&&body.password&&body.password.length<6))return notify("Le mot de passe doit contenir au moins 6 caractères.",true);
+      const btn=el("saveBtn");btn.disabled=true;btn.textContent="Enregistrement…";
+      try{await api(userId?"PATCH":"POST",body);closeEditor();notify(userId?"Utilisateur modifié.":"Utilisateur créé.");await loadUsers()}catch(error){notify(error.message,true)}finally{btn.disabled=false;btn.textContent="Enregistrer"}
+    }
+    async function toggleActive(id){
+      const u=allUsers.find(x=>x.id===id);if(!u)return;
+      const block=!!u.is_active;
+      if(block&&!confirm(`Bloquer « ${u.username} » ?\n\nIl ne pourra plus jouer ni se reconnecter tant que vous ne l'aurez pas débloqué.`))return;
+      try{await api("PATCH",{userId:id,action:"setActive",isActive:!block});notify(block?`« ${u.username} » est bloqué.`:`« ${u.username} » est débloqué.`);await loadUsers()}catch(error){notify(error.message,true)}
+    }
+    function notify(text,error=false){el("message").innerHTML=`<div class="message ${error?"error":""}">${escapeHtml(text)}</div>`;setTimeout(()=>el("message").innerHTML="",4500)}
+    if(localStorage.getItem(SECRET_KEY)){showApp();loadUsers()}
+  </script>
+</body>
+</html>
